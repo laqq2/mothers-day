@@ -112,7 +112,7 @@ export function TimelineViewer({ payload }: TimelineViewerProps) {
             transition={{ duration: 0.8, ease: "easeOut" }}
             className="mb-3 font-['DM_Sans'] text-xs uppercase tracking-[0.22em] text-white/80"
           >
-            Letter Through Time
+            Forevergram
           </motion.p>
           <motion.h1
             initial={{ opacity: 0, y: 24 }}

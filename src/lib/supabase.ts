@@ -26,7 +26,7 @@ const demoTimeline: TimelinePayload = {
     hero_image_url:
       "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=1800&q=80",
     final_message:
-      "You made ordinary days feel like magic. Thank you for teaching me tenderness, courage, and how to find light in every season.",
+      "You made ordinary days feel like magic. Thank you for teaching me tenderness, courage, and how to find light in every season. Happy Mother's Day.",
     theme: "warm",
     ending_effect: "petals",
   },
