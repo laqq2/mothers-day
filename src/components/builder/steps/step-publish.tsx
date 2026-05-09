@@ -42,10 +42,14 @@ export function StepPublish({ draft, onBack, onPublished }: StepPublishProps) {
               setLoading(true);
               setError(null);
               const formData = await buildPublishFormData(draft);
-              const slug = await publishTimelineAction(formData);
-              onPublished(slug);
-            } catch (err) {
-              setError(err instanceof Error ? err.message : "Publishing failed. Please retry.");
+              const result = await publishTimelineAction(formData);
+              if (!result.ok) {
+                setError(result.error);
+                return;
+              }
+              onPublished(result.slug);
+            } catch {
+              setError("Publishing failed. Please retry.");
             } finally {
               setLoading(false);
             }
