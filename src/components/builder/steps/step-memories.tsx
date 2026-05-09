@@ -27,11 +27,27 @@ function blankCard(): DraftCard {
 }
 
 export function StepMemories({ draft, setDraft, onNext, onBack, canContinue }: StepMemoriesProps) {
+  const revokeIfBlob = (url: string | undefined) => {
+    if (typeof url === "string" && url.startsWith("blob:")) {
+      URL.revokeObjectURL(url);
+    }
+  };
+
   const updateCard = (localId: string, patch: Partial<DraftCard>) => {
     setDraft((prev) => ({
       ...prev,
       cards: prev.cards.map((card) => (card.localId === localId ? { ...card, ...patch } : card)),
     }));
+  };
+
+  const setCardFile = (card: DraftCard, file: File) => {
+    revokeIfBlob(card.previewUrl);
+    updateCard(card.localId, { file, previewUrl: URL.createObjectURL(file) });
+  };
+
+  const clearCardFile = (card: DraftCard) => {
+    revokeIfBlob(card.previewUrl);
+    updateCard(card.localId, { file: null, previewUrl: "" });
   };
 
   const moveCard = (index: number, dir: -1 | 1) => {
@@ -75,7 +91,7 @@ export function StepMemories({ draft, setDraft, onNext, onBack, canContinue }: S
               </div>
 
               <label className="inline-flex cursor-pointer rounded-full bg-[#C4714A] px-5 py-2 text-xs font-semibold text-white transition hover:scale-[1.02] hover:shadow-[0_8px_20px_rgba(196,113,74,0.3)]">
-                Upload photo
+                {card.file ? "Replace photo" : "Upload photo"}
                 <input
                   type="file"
                   accept="image/*"
@@ -83,13 +99,18 @@ export function StepMemories({ draft, setDraft, onNext, onBack, canContinue }: S
                   onChange={(e) => {
                     const file = e.target.files?.[0] ?? null;
                     if (!file) return;
-                    updateCard(card.localId, { file, previewUrl: URL.createObjectURL(file) });
+                    setCardFile(card, file);
                   }}
                 />
               </label>
 
               {card.previewUrl ? (
-                <img src={card.previewUrl} alt="Memory preview" className="mt-3 h-[180px] w-full rounded-xl object-cover" />
+                <img
+                  src={card.previewUrl}
+                  alt="Memory preview"
+                  className="mt-3 h-[180px] w-full rounded-xl object-cover"
+                  onError={() => clearCardFile(card)}
+                />
               ) : null}
 
               <div className="mt-3 grid gap-3 sm:grid-cols-2">

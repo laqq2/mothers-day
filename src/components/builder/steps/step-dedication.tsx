@@ -12,10 +12,22 @@ type StepDedicationProps = {
 };
 
 export function StepDedication({ draft, setDraft, onNext, canContinue }: StepDedicationProps) {
+  const revokeIfBlob = (url: string) => {
+    if (typeof url === "string" && url.startsWith("blob:")) {
+      URL.revokeObjectURL(url);
+    }
+  };
+
   const onHeroFile = (file: File | null) => {
     if (!file) return;
+    revokeIfBlob(draft.heroPreviewUrl);
     const previewUrl = URL.createObjectURL(file);
     setDraft((prev) => ({ ...prev, heroFile: file, heroPreviewUrl: previewUrl }));
+  };
+
+  const removeHero = () => {
+    revokeIfBlob(draft.heroPreviewUrl);
+    setDraft((prev) => ({ ...prev, heroFile: null, heroPreviewUrl: "" }));
   };
 
   return (
@@ -62,10 +74,15 @@ export function StepDedication({ draft, setDraft, onNext, canContinue }: StepDed
 
           {draft.heroPreviewUrl ? (
             <div className="relative mt-4 overflow-hidden rounded-xl border border-[#E8D5C0] bg-white/70 shadow-sm">
-              <img src={draft.heroPreviewUrl} alt="Hero preview" className="h-[200px] w-full object-cover" />
+              <img
+                src={draft.heroPreviewUrl}
+                alt="Hero preview"
+                className="h-[200px] w-full object-cover"
+                onError={removeHero}
+              />
               <button
                 type="button"
-                onClick={() => setDraft((prev) => ({ ...prev, heroFile: null, heroPreviewUrl: "" }))}
+                onClick={removeHero}
                 className="absolute right-2 top-2 rounded-full bg-black/70 px-2 py-1 text-xs text-white transition hover:bg-black/90"
               >
                 ✕

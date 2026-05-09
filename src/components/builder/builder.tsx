@@ -72,42 +72,69 @@ export function Builder() {
   const [step, setStep] = useState(0);
   const [visitedSteps, setVisitedSteps] = useState<number[]>([0]);
   const [draft, setDraft] = useState<DraftTimeline>(DEFAULT_DRAFT);
+  const [needsPhotoReupload, setNeedsPhotoReupload] = useState(false);
 
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (!raw) return;
-      const parsed = JSON.parse(raw) as Partial<DraftTimelineStored>;
+      const parsed = JSON.parse(raw) as Partial<DraftTimelineStored> & {
+        heroPreviewUrl?: string;
+        cards?: Array<Partial<DraftCard>>;
+      };
+
+      // Photo previews use `blob:` URLs that only live for the current page session.
+      // They are useless after a reload, so we drop them on restore and prompt the
+      // user to re-attach photos if any were present in the saved draft.
+      const hadHero = Boolean(parsed.heroPreviewUrl);
+      const hadCardPhotos = parsed.cards?.some((c) => Boolean(c?.previewUrl)) ?? false;
+
       setDraft({
         dedicated_to: parsed.dedicated_to ?? "",
         creator_name: parsed.creator_name ?? "",
         heroFile: null,
-        heroPreviewUrl: parsed.heroPreviewUrl ?? "",
+        heroPreviewUrl: "",
         cards:
           parsed.cards?.length
             ? parsed.cards.map((card) => ({
-                localId: card.localId ?? nanoid(),
+                localId: card?.localId ?? nanoid(),
                 file: null,
-                previewUrl: card.previewUrl ?? "",
-                year: card.year ?? "",
-                caption: card.caption ?? "",
-                emotion_tag: card.emotion_tag ?? "",
+                previewUrl: "",
+                year: card?.year ?? "",
+                caption: card?.caption ?? "",
+                emotion_tag: card?.emotion_tag ?? "",
               }))
             : [createBlankCard()],
         final_message: parsed.final_message ?? "",
         theme: (parsed.theme as TimelineTheme) ?? "warm",
         ending_effect: (parsed.ending_effect as EndingEffect) ?? "petals",
       });
+
+      if (hadHero || hadCardPhotos) {
+        setNeedsPhotoReupload(true);
+      }
     } catch {
       // no-op on malformed storage
     }
   }, []);
 
+  // Auto-dismiss the re-upload banner once any photo is attached again.
   useEffect(() => {
+    if (!needsPhotoReupload) return;
+    if (draft.heroFile || draft.cards.some((c) => c.file)) {
+      setNeedsPhotoReupload(false);
+    }
+  }, [draft.heroFile, draft.cards, needsPhotoReupload]);
+
+  useEffect(() => {
+    // Note: we deliberately do NOT persist `previewUrl` / `heroPreviewUrl`. They
+    // are `blob:` URLs that die on reload, and saving them caused 404 console
+    // errors when the builder restored a stale URL.
     const serializable: DraftTimelineStored = {
       ...draft,
       heroFile: null,
-      cards: draft.cards.map((card) => ({ ...card, file: null })),
+      heroPreviewUrl: "",
+      cards: draft.cards.map((card) => ({ ...card, file: null, previewUrl: "" })),
     };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(serializable));
   }, [draft]);
@@ -165,6 +192,25 @@ export function Builder() {
             </p>
           </div>
         </div>
+        {needsPhotoReupload ? (
+          <div className="mb-6 flex items-start gap-3 rounded-2xl border border-[#E8D5C0] bg-white/70 px-4 py-3 shadow-sm">
+            <span aria-hidden className="mt-0.5 text-lg">📎</span>
+            <div className="flex-1">
+              <p className="font-['Playfair_Display'] text-base text-[#1C1008]">Welcome back</p>
+              <p className="mt-0.5 font-['DM_Sans'] text-xs leading-relaxed text-[#1C1008]/70">
+                We saved your words, but photos can&apos;t be remembered across reloads. Please re-attach them to publish.
+              </p>
+            </div>
+            <button
+              type="button"
+              aria-label="Dismiss"
+              onClick={() => setNeedsPhotoReupload(false)}
+              className="shrink-0 rounded-full px-2 py-0.5 font-['DM_Sans'] text-xs text-[#1C1008]/60 transition hover:bg-[#FBF6EF] hover:text-[#1C1008]"
+            >
+              ✕
+            </button>
+          </div>
+        ) : null}
         <div className="mb-10 grid grid-cols-5 gap-2">
           {STEP_LABELS.map((label, idx) => {
             const isActive = idx === step;
