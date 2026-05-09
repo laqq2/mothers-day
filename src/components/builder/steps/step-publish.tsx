@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { publishTimelineAction } from "@/app/actions/publish-timeline";
+import { subscribeEmailAction } from "@/app/actions/subscribe-email";
 import type { DraftTimeline } from "@/components/builder/builder";
 import { buildPublishFormData } from "@/lib/publish-form";
 
@@ -19,6 +20,13 @@ export function StepPublish({ draft, onBack, onPublished }: StepPublishProps) {
   const [publishedSlug, setPublishedSlug] = useState<string | null>(null);
   const [shareStatus, setShareStatus] = useState<string | null>(null);
   const [canNativeShare, setCanNativeShare] = useState(false);
+  const [email, setEmail] = useState("");
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [emailState, setEmailState] = useState<
+    | { kind: "idle" }
+    | { kind: "ok"; emailed: boolean; address: string }
+    | { kind: "error"; message: string }
+  >({ kind: "idle" });
   const shareTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const validCards = draft.cards.filter((card) => card.file && card.year.trim() && card.caption.trim());
@@ -121,6 +129,71 @@ export function StepPublish({ draft, onBack, onPublished }: StepPublishProps) {
               Copy
             </button>
           </div>
+        </div>
+
+        <div className="mt-6 rounded-2xl border border-[#E8D5C0] bg-[#FBF6EF]/70 p-5 shadow-[0_8px_24px_rgba(121,78,45,0.06)]">
+          {emailState.kind === "ok" ? (
+            <div>
+              <p className="font-['Playfair_Display'] text-lg text-[#1C1008]">
+                {emailState.emailed ? "Sent — check your inbox." : "Saved. We'll be in touch."}
+              </p>
+              <p className="mt-1 font-['DM_Sans'] text-xs text-[#1C1008]/65">
+                {emailState.emailed
+                  ? `We just sent your link to ${emailState.address}. If it doesn't arrive in a few minutes, check spam.`
+                  : `We've recorded ${emailState.address}. The link is right above — bookmark it so you never lose it.`}
+              </p>
+            </div>
+          ) : (
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!publishedSlug || emailLoading) return;
+                setEmailLoading(true);
+                setEmailState({ kind: "idle" });
+                try {
+                  const result = await subscribeEmailAction(publishedSlug, email);
+                  if (!result.ok) {
+                    setEmailState({ kind: "error", message: result.error });
+                    return;
+                  }
+                  setEmailState({ kind: "ok", emailed: result.emailed, address: email.trim() });
+                } catch {
+                  setEmailState({ kind: "error", message: "Couldn't save your email. Please try again." });
+                } finally {
+                  setEmailLoading(false);
+                }
+              }}
+            >
+              <p className="font-['Playfair_Display'] text-lg text-[#1C1008]">
+                Email me a copy of the link
+              </p>
+              <p className="mt-1 font-['DM_Sans'] text-xs text-[#1C1008]/65">
+                So you never lose it. We&apos;ll only use your email for this.
+              </p>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <input
+                  type="email"
+                  required
+                  inputMode="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full rounded-full border border-[#E8D5C0] bg-white px-4 py-2.5 font-['DM_Sans'] text-sm text-[#1C1008] outline-none transition focus:border-[#C4714A] focus:ring-2 focus:ring-[#C4714A]/20"
+                />
+                <button
+                  type="submit"
+                  disabled={emailLoading}
+                  className="shrink-0 rounded-full bg-[#1C1008] px-5 py-2.5 font-['DM_Sans'] text-sm font-semibold text-white transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+                >
+                  {emailLoading ? "Sending..." : "Email me the link"}
+                </button>
+              </div>
+              {emailState.kind === "error" ? (
+                <p className="mt-2 font-['DM_Sans'] text-xs text-red-700">{emailState.message}</p>
+              ) : null}
+            </form>
+          )}
         </div>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">

@@ -111,3 +111,59 @@ export const getTimelineBySlug = cache(async (slug: string): Promise<TimelinePay
     cards: resolvedCards,
   };
 });
+
+export type AdminStats = {
+  totalTimelines: number;
+  totalEmails: number;
+  last24h: number;
+  last7d: number;
+};
+
+export type AdminTimelineRow = {
+  slug: string;
+  dedicated_to: string;
+  creator_name: string | null;
+  creator_email: string | null;
+  view_count: number;
+  created_at: string;
+};
+
+export async function getAdminStats(): Promise<AdminStats | null> {
+  const sql = getSql();
+  if (!sql) return null;
+
+  const rows = await sql`
+    select
+      count(*)::int as total_timelines,
+      count(creator_email)::int as total_emails,
+      count(*) filter (where created_at >= now() - interval '24 hours')::int as last_24h,
+      count(*) filter (where created_at >= now() - interval '7 days')::int as last_7d
+    from timelines
+  `;
+
+  const row = rows[0] as
+    | { total_timelines: number; total_emails: number; last_24h: number; last_7d: number }
+    | undefined;
+  if (!row) return null;
+
+  return {
+    totalTimelines: row.total_timelines,
+    totalEmails: row.total_emails,
+    last24h: row.last_24h,
+    last7d: row.last_7d,
+  };
+}
+
+export async function getRecentTimelinesForAdmin(limit = 50): Promise<AdminTimelineRow[]> {
+  const sql = getSql();
+  if (!sql) return [];
+
+  const rows = await sql`
+    select slug, dedicated_to, creator_name, creator_email, view_count, created_at
+    from timelines
+    order by created_at desc
+    limit ${limit}
+  `;
+
+  return rows as AdminTimelineRow[];
+}

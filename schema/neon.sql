@@ -6,6 +6,7 @@ create table if not exists timelines (
   slug text unique not null,
   dedicated_to text not null,
   creator_name text,
+  creator_email text,
   hero_image_url text,
   final_message text not null,
   theme text default 'warm',
@@ -15,6 +16,9 @@ create table if not exists timelines (
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+
+-- Idempotent migration for existing deployments that pre-date creator_email.
+alter table timelines add column if not exists creator_email text;
 
 create table if not exists memory_cards (
   id uuid default gen_random_uuid() primary key,
@@ -28,4 +32,6 @@ create table if not exists memory_cards (
 );
 
 create index if not exists timelines_slug_idx on timelines (slug);
+create index if not exists timelines_creator_email_idx on timelines (creator_email);
+create index if not exists timelines_created_at_idx on timelines (created_at desc);
 create index if not exists memory_cards_timeline_position_idx on memory_cards (timeline_id, position);
