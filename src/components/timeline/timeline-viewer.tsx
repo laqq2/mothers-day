@@ -93,17 +93,28 @@ export function TimelineViewer({ payload }: TimelineViewerProps) {
           slideRefs.current[0] = el;
         }}
         data-slide-index={0}
-        className="relative h-[100dvh] shrink-0 snap-start overflow-hidden"
+        className="relative h-[100dvh] shrink-0 snap-start overflow-hidden bg-black"
       >
+        <Image
+          src={hero}
+          alt=""
+          aria-hidden
+          fill
+          priority
+          sizes="100vw"
+          unoptimized
+          className="object-cover scale-110 blur-2xl opacity-60"
+        />
         <Image
           src={hero}
           alt={`Hero image for ${timeline.dedicated_to}`}
           fill
           priority
           sizes="100vw"
-          className="object-cover"
+          unoptimized
+          className="object-contain"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
         <div className="absolute inset-x-0 bottom-20 z-10 px-6 sm:px-10">
           <motion.img
@@ -164,11 +175,22 @@ export function TimelineViewer({ payload }: TimelineViewerProps) {
               slideRefs.current[globalSlideIndex] = el;
             }}
             data-slide-index={globalSlideIndex}
-            className="relative h-[100dvh] shrink-0 snap-start overflow-hidden"
+            className="relative h-[100dvh] shrink-0 snap-start overflow-hidden bg-black"
           >
             <div
               className="absolute left-0 top-0 z-20 h-[2px] opacity-70"
               style={{ width: `${progress}%`, backgroundColor: theme.accent }}
+            />
+            <Image
+              src={card.image_url}
+              alt=""
+              aria-hidden
+              fill
+              sizes="100vw"
+              priority={index === 0}
+              loading={index === 0 ? undefined : eager ? "eager" : "lazy"}
+              unoptimized
+              className="object-cover scale-110 blur-2xl opacity-55"
             />
             <Image
               src={card.image_url}
@@ -177,9 +199,10 @@ export function TimelineViewer({ payload }: TimelineViewerProps) {
               sizes="100vw"
               priority={index === 0}
               loading={index === 0 ? undefined : eager ? "eager" : "lazy"}
-              className="object-cover"
+              unoptimized
+              className="object-contain"
             />
-            <div className="absolute inset-0 bg-black/40" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-black/30" />
 
             <motion.div
               initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
