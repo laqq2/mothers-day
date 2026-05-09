@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { publishTimelineAction } from "@/app/actions/publish-timeline";
 import { subscribeEmailAction } from "@/app/actions/subscribe-email";
 import type { DraftTimeline } from "@/components/builder/builder";
-import { buildPublishFormData } from "@/lib/publish-form";
+import { uploadDraftAndBuildPayload } from "@/lib/publish-client";
 
 type StepPublishProps = {
   draft: DraftTimeline;
@@ -16,6 +16,7 @@ type StepPublishProps = {
 
 export function StepPublish({ draft, onBack, onPublished }: StepPublishProps) {
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [publishedSlug, setPublishedSlug] = useState<string | null>(null);
   const [shareStatus, setShareStatus] = useState<string | null>(null);
@@ -274,23 +275,30 @@ export function StepPublish({ draft, onBack, onPublished }: StepPublishProps) {
             try {
               setLoading(true);
               setError(null);
-              const formData = await buildPublishFormData(draft);
-              const result = await publishTimelineAction(formData);
+              setProgress("Uploading photos…");
+              const payload = await uploadDraftAndBuildPayload(draft);
+              setProgress("Publishing…");
+              const result = await publishTimelineAction(payload);
               if (!result.ok) {
                 setError(result.error);
                 return;
               }
               setPublishedSlug(result.slug);
               onPublished(result.slug);
-            } catch {
-              setError("Publishing failed. Please retry.");
+            } catch (err) {
+              const message =
+                err instanceof Error && err.message
+                  ? err.message
+                  : "Publishing failed. Please retry.";
+              setError(message);
             } finally {
               setLoading(false);
+              setProgress(null);
             }
           }}
           className="rounded-full bg-[#C4714A] px-6 py-2.5 font-['DM_Sans'] text-sm font-semibold text-white transition hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
         >
-          {loading ? "Publishing..." : "Publish my timeline"}
+          {loading ? (progress ?? "Publishing…") : "Publish my timeline"}
         </button>
       </div>
     </section>
