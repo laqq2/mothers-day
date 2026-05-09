@@ -1,5 +1,4 @@
 import { neon } from "@neondatabase/serverless";
-import { get } from "@vercel/blob";
 import { cache } from "react";
 
 import type { MemoryCard, Timeline, TimelinePayload } from "@/types/timeline";
@@ -10,8 +9,6 @@ function getSql() {
   return neon(url);
 }
 
-const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
-
 function isHttpUrl(value: string) {
   return value.startsWith("http://") || value.startsWith("https://");
 }
@@ -19,20 +16,7 @@ function isHttpUrl(value: string) {
 async function resolveBlobUrl(pathOrUrl: string | null): Promise<string | null> {
   if (!pathOrUrl) return null;
   if (isHttpUrl(pathOrUrl)) return pathOrUrl;
-  if (!blobToken) return null;
-
-  try {
-    const result = await get(pathOrUrl, {
-      access: "private",
-      token: blobToken,
-      useCache: true,
-    });
-    if (!result) return null;
-    // Use display URL (downloadUrl forces attachment behavior in browsers).
-    return result.blob.url;
-  } catch {
-    return null;
-  }
+  return `/api/blob-image?path=${encodeURIComponent(pathOrUrl)}`;
 }
 
 const demoTimeline: TimelinePayload = {
