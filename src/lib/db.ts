@@ -1,5 +1,5 @@
 import { neon } from "@neondatabase/serverless";
-import { head } from "@vercel/blob";
+import { get } from "@vercel/blob";
 import { cache } from "react";
 
 import type { MemoryCard, Timeline, TimelinePayload } from "@/types/timeline";
@@ -22,9 +22,14 @@ async function resolveBlobUrl(pathOrUrl: string | null): Promise<string | null> 
   if (!blobToken) return null;
 
   try {
-    const result = await head(pathOrUrl, { token: blobToken });
-    // For private blobs, use the signed download URL.
-    return result.downloadUrl;
+    const result = await get(pathOrUrl, {
+      access: "private",
+      token: blobToken,
+      useCache: true,
+    });
+    if (!result) return null;
+    // Use display URL (downloadUrl forces attachment behavior in browsers).
+    return result.blob.url;
   } catch {
     return null;
   }
