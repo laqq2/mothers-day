@@ -19,6 +19,9 @@ export function StepPublish({ draft, onBack, onPublished }: StepPublishProps) {
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [publishedSlug, setPublishedSlug] = useState<string | null>(null);
+  // Captured at publish time so the success card keeps showing the right name
+  // even after `clearDraft()` resets the draft state in the parent.
+  const [publishedFor, setPublishedFor] = useState<string>("");
   const [shareStatus, setShareStatus] = useState<string | null>(null);
   const [canNativeShare, setCanNativeShare] = useState(false);
   const [email, setEmail] = useState("");
@@ -38,9 +41,11 @@ export function StepPublish({ draft, onBack, onPublished }: StepPublishProps) {
     return `${window.location.origin}/t/${publishedSlug}`;
   }, [publishedSlug]);
 
+  const recipientName = publishedFor || draft.dedicated_to || "Mum";
+
   const shareText = useMemo(
-    () => `I made this for ${draft.dedicated_to || "Mum"} on Forevergram — watch it here:`,
-    [draft.dedicated_to],
+    () => `I made this for ${recipientName} on Forevergram — watch it here:`,
+    [recipientName],
   );
 
   useEffect(() => {
@@ -61,7 +66,7 @@ export function StepPublish({ draft, onBack, onPublished }: StepPublishProps) {
     try {
       if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
         await navigator.share({
-          title: `A timeline for ${draft.dedicated_to || "Mum"}`,
+          title: `A timeline for ${recipientName}`,
           text: shareText,
           url: shareUrl,
         });
@@ -105,7 +110,7 @@ export function StepPublish({ draft, onBack, onPublished }: StepPublishProps) {
       <section>
         <p className="mb-2 font-['DM_Sans'] text-xs uppercase tracking-[0.18em] text-[#C4714A]">All done</p>
         <h2 className="font-['Playfair_Display'] text-3xl text-[#1C1008]">
-          Your timeline is live for {draft.dedicated_to || "Mum"}
+          Your timeline is live for {recipientName}
         </h2>
         <p className="mt-2 text-sm text-[#1C1008]/70">
           Send the link below — anyone who opens it can watch the whole reel. No login, no app.
@@ -203,7 +208,7 @@ export function StepPublish({ draft, onBack, onPublished }: StepPublishProps) {
             onClick={handleNativeShare}
             className="rounded-full bg-[#C4714A] px-6 py-3 font-['DM_Sans'] text-sm font-semibold text-white shadow-lg shadow-[#C4714A]/20 transition hover:scale-[1.02]"
           >
-            {canNativeShare ? `Share with ${draft.dedicated_to || "Mum"}` : "Copy link to send"}
+            {canNativeShare ? `Share with ${recipientName}` : "Copy link to send"}
           </button>
           <Link
             href={`/t/${publishedSlug}`}
@@ -230,7 +235,7 @@ export function StepPublish({ draft, onBack, onPublished }: StepPublishProps) {
           </button>
           <a
             href={`mailto:?subject=${encodeURIComponent(
-              `A little something for ${draft.dedicated_to || "you"}`,
+              `A little something for ${recipientName}`,
             )}&body=${encodeURIComponent(`${shareText} ${shareUrl}`)}`}
             className="rounded-full border border-[#1C1008]/15 bg-white px-4 py-2 font-['DM_Sans'] text-xs font-medium text-[#1C1008] transition hover:bg-[#FBF6EF]"
           >
@@ -283,6 +288,7 @@ export function StepPublish({ draft, onBack, onPublished }: StepPublishProps) {
                 setError(result.error);
                 return;
               }
+              setPublishedFor(draft.dedicated_to.trim() || "Mum");
               setPublishedSlug(result.slug);
               onPublished(result.slug);
             } catch (err) {

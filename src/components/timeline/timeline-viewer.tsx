@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion, type Variants } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -12,6 +12,30 @@ import type { TimelinePayload } from "@/types/timeline";
 type TimelineViewerProps = {
   payload: TimelinePayload;
 };
+
+// Tunes typography + animation pacing to message length so a 500-char closing
+// note still fits a small phone viewport without overflow.
+function pickFinaleSizing(messageLength: number) {
+  if (messageLength > 320) {
+    return {
+      heading: "text-base sm:text-2xl md:text-3xl",
+      leading: "leading-snug",
+      stagger: 0.014,
+    };
+  }
+  if (messageLength > 180) {
+    return {
+      heading: "text-lg sm:text-3xl md:text-4xl",
+      leading: "leading-snug",
+      stagger: 0.022,
+    };
+  }
+  return {
+    heading: "text-2xl sm:text-4xl md:text-5xl",
+    leading: "leading-snug sm:leading-tight",
+    stagger: 0.032,
+  };
+}
 
 export function TimelineViewer({ payload }: TimelineViewerProps) {
   const { timeline, cards } = payload;
@@ -33,6 +57,44 @@ export function TimelineViewer({ payload }: TimelineViewerProps) {
   }, [timeline.hero_image_url]);
 
   const totalSlides = cards.length + 2;
+  const finaleSizing = useMemo(
+    () => pickFinaleSizing(timeline.final_message.length),
+    [timeline.final_message],
+  );
+  const finaleWords = useMemo(
+    () => timeline.final_message.split(/\s+/).filter(Boolean),
+    [timeline.final_message],
+  );
+
+  const finaleHeadingVariants: Variants = useMemo(
+    () => ({
+      hidden: {},
+      visible: {
+        transition: {
+          delayChildren: 0.08,
+          staggerChildren: prefersReducedMotion ? 0 : finaleSizing.stagger,
+        },
+      },
+    }),
+    [finaleSizing.stagger, prefersReducedMotion],
+  );
+
+  const finaleWordVariants: Variants = useMemo(
+    () => ({
+      hidden: prefersReducedMotion
+        ? { opacity: 1, y: 0 }
+        : { opacity: 0, y: 10, filter: "blur(3px)" },
+      visible: prefersReducedMotion
+        ? { opacity: 1, y: 0 }
+        : {
+            opacity: 1,
+            y: 0,
+            filter: "blur(0px)",
+            transition: { duration: 0.45, ease: "easeOut" },
+          },
+    }),
+    [prefersReducedMotion],
+  );
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -43,15 +105,11 @@ export function TimelineViewer({ payload }: TimelineViewerProps) {
           setCurrentSlide(idx);
 
           if (idx < cards.length) {
-            setEagerCardIndices((prev) => {
-              const next = idx;
-              if (prev.includes(next)) return prev;
-              return [...prev, next];
-            });
+            setEagerCardIndices((prev) => (prev.includes(idx) ? prev : [...prev, idx]));
           }
         });
       },
-      { threshold: 0.9 },
+      { threshold: 0.6 },
     );
 
     slideRefs.current.forEach((slide) => {
@@ -151,6 +209,7 @@ export function TimelineViewer({ payload }: TimelineViewerProps) {
         overscrollBehavior: "contain",
       }}
     >
+      {/* Hero slide */}
       <section
         ref={(el) => {
           slideRefs.current[0] = el;
@@ -177,55 +236,63 @@ export function TimelineViewer({ payload }: TimelineViewerProps) {
           unoptimized
           className="object-contain"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
 
-        <div className="absolute inset-x-0 bottom-20 z-10 px-6 sm:px-10">
+        <div
+          className="absolute inset-x-0 z-10 px-6 sm:px-10"
+          style={{ bottom: "calc(5rem + env(safe-area-inset-bottom))" }}
+        >
           <motion.img
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
+            transition={{ duration: 0.7, ease: "easeOut" }}
             src="/forevergram-logo.png"
             alt="Forevergram logo"
-            className="mb-4 h-12 w-12 rounded-lg border border-white/30 bg-white/80 p-1 object-cover"
+            className="mb-3 h-11 w-11 rounded-lg border border-white/30 bg-white/80 p-1 object-cover sm:h-12 sm:w-12"
           />
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className="mb-3 font-['DM_Sans'] text-xs uppercase tracking-[0.22em] text-white/80"
+            transition={{ duration: 0.7, ease: "easeOut" }}
+            className="mb-2 font-['DM_Sans'] text-[11px] uppercase tracking-[0.22em] text-white/80 sm:text-xs"
           >
             Forevergram
           </motion.p>
           <motion.h1
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 22 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.18, duration: 1, ease: "easeOut" }}
-            className="max-w-3xl font-['Playfair_Display'] text-[2.4rem] leading-tight text-white sm:text-[52px]"
+            transition={{ delay: 0.16, duration: 0.9, ease: "easeOut" }}
+            className="max-w-3xl font-['Playfair_Display'] text-[2rem] leading-tight text-white sm:text-[44px] md:text-[52px]"
           >
             {timeline.dedicated_to}
           </motion.h1>
           {timeline.creator_name ? (
             <motion.p
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.35, duration: 0.8, ease: "easeOut" }}
+              transition={{ delay: 0.32, duration: 0.7, ease: "easeOut" }}
               className="mt-3 font-['DM_Sans'] text-sm text-white/80"
             >
               Made with love by {timeline.creator_name}
             </motion.p>
           ) : null}
         </div>
+
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.8, duration: 0.6 }}
-          className="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2 text-white/90"
+          transition={{ delay: 0.7, duration: 0.6 }}
+          className="absolute left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-1 text-white/90"
+          style={{ bottom: "calc(1.5rem + env(safe-area-inset-bottom))" }}
         >
           <span className="animate-bounce text-2xl">↓</span>
-          <span className="font-['DM_Sans'] text-xs uppercase tracking-[0.18em]">Swipe up</span>
+          <span className="font-['DM_Sans'] text-[10px] uppercase tracking-[0.2em] sm:text-xs">
+            Swipe up
+          </span>
         </motion.div>
       </section>
 
+      {/* Memory card slides */}
       {cards.map((card, index) => {
         const globalSlideIndex = index + 1;
         const progress = ((index + 1) / cards.length) * 100;
@@ -265,22 +332,28 @@ export function TimelineViewer({ payload }: TimelineViewerProps) {
               unoptimized
               className="object-contain"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/15 to-black/30" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/15 to-black/30" />
 
             <motion.div
-              initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
+              initial={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.9 }}
+              viewport={{ once: true, amount: 0.5 }}
               transition={{ duration: 0.5, ease: "easeOut" }}
-              className="absolute inset-x-0 bottom-0 z-10 min-h-[40%] bg-gradient-to-t from-black/[0.85] via-black/40 to-transparent px-5 pb-10 pt-6 sm:px-8"
+              className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/[0.88] via-black/45 to-transparent px-5 pt-8 sm:px-8 sm:pt-10"
+              style={{ paddingBottom: "calc(2rem + env(safe-area-inset-bottom))" }}
             >
-              <p className="font-['Playfair_Display'] text-[70px] leading-none sm:text-[80px]" style={{ color: theme.accent }}>
+              <p
+                className="font-['Playfair_Display'] text-[44px] leading-none sm:text-[64px] md:text-[80px]"
+                style={{ color: theme.accent }}
+              >
                 {card.year}
               </p>
-              <p className="mt-2 max-w-2xl text-base leading-relaxed text-white/90 sm:text-lg">{card.caption}</p>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/90 sm:text-base md:text-lg">
+                {card.caption}
+              </p>
               {card.emotion_tag ? (
                 <span
-                  className="mt-4 inline-flex rounded-full border px-3 py-1 font-['DM_Sans'] text-xs uppercase tracking-[0.12em]"
+                  className="mt-3 inline-flex rounded-full border px-3 py-1 font-['DM_Sans'] text-[10px] uppercase tracking-[0.12em] sm:text-xs"
                   style={{ borderColor: `${theme.accent}88`, color: theme.accent }}
                 >
                   {card.emotion_tag}
@@ -288,8 +361,11 @@ export function TimelineViewer({ payload }: TimelineViewerProps) {
               ) : null}
             </motion.div>
 
-            <div className="absolute bottom-32 right-4 z-20 flex flex-col items-center gap-6">
-              <span className="font-['DM_Sans'] text-xs tracking-[0.14em] text-white/90">
+            <div
+              className="absolute right-4 z-20 flex flex-col items-center gap-4 text-white/90"
+              style={{ bottom: "calc(8rem + env(safe-area-inset-bottom))" }}
+            >
+              <span className="font-['DM_Sans'] text-xs tracking-[0.14em]">
                 {index + 1}/{cards.length}
               </span>
               <span style={{ color: theme.accent }} className="text-xl">
@@ -300,38 +376,40 @@ export function TimelineViewer({ payload }: TimelineViewerProps) {
         );
       })}
 
+      {/* Finale slide */}
       <section
         ref={(el) => {
           slideRefs.current[totalSlides - 1] = el;
         }}
         data-slide-index={totalSlides - 1}
-        className="relative flex h-[100dvh] shrink-0 snap-start items-center justify-center px-6 py-20 text-center"
+        className="relative flex h-[100dvh] shrink-0 snap-start flex-col items-center justify-center overflow-hidden px-5 py-8 text-center sm:px-8 sm:py-14"
+        style={{ paddingBottom: "calc(2rem + env(safe-area-inset-bottom))" }}
       >
-        <div className="mx-auto max-w-3xl">
+        <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-col items-center">
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="mb-5 font-['DM_Sans'] text-xs uppercase tracking-[0.18em]"
-            style={{ color: `${theme.accent}` }}
+            transition={{ duration: 0.5 }}
+            className="mb-3 font-['DM_Sans'] text-[10px] uppercase tracking-[0.2em] sm:mb-5 sm:text-xs"
+            style={{ color: theme.accent }}
           >
             Final message
           </motion.p>
 
           <motion.h2
             onViewportEnter={() => setShowFinale(true)}
-            viewport={{ once: true, amount: 0.6 }}
-            className="font-['Playfair_Display'] text-3xl leading-relaxed sm:text-5xl"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.25 }}
+            variants={finaleHeadingVariants}
+            className={`font-['Playfair_Display'] ${finaleSizing.heading} ${finaleSizing.leading}`}
           >
-            {timeline.final_message.split(" ").map((word, index) => (
+            {finaleWords.map((word, index) => (
               <motion.span
                 key={`${word}-${index}`}
-                initial={{ opacity: 0, y: 12, filter: "blur(3px)" }}
-                whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                viewport={{ once: true, amount: 0.6 }}
-                transition={{ duration: 0.5, delay: index * 0.04, ease: "easeOut" }}
-                className="inline-block mr-2"
+                variants={finaleWordVariants}
+                className="mr-2 inline-block"
               >
                 {word}
               </motion.span>
@@ -339,31 +417,31 @@ export function TimelineViewer({ payload }: TimelineViewerProps) {
           </motion.h2>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.6 }}
-            transition={{ delay: 0.6, duration: 0.7 }}
-            className="mt-14 flex flex-col items-center gap-4"
+            viewport={{ once: true, amount: 0.4 }}
+            transition={{ delay: 0.4, duration: 0.6 }}
+            className="mt-7 flex w-full flex-col items-center gap-3 sm:mt-12 sm:gap-4"
           >
             <p
-              className="font-['DM_Sans'] text-xs uppercase tracking-[0.18em]"
-              style={{ color: `${theme.accent}` }}
+              className="font-['DM_Sans'] text-[10px] uppercase tracking-[0.2em] sm:text-xs"
+              style={{ color: theme.accent }}
             >
               Send this to {timeline.dedicated_to}
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-3">
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
               <button
                 type="button"
                 onClick={handleNativeShare}
-                className="rounded-full px-6 py-2.5 font-['DM_Sans'] text-sm font-semibold text-white shadow-lg shadow-black/10 transition hover:scale-[1.03]"
+                className="rounded-full px-5 py-2.5 font-['DM_Sans'] text-xs font-semibold text-white shadow-lg shadow-black/10 transition hover:scale-[1.03] sm:px-6 sm:text-sm"
                 style={{ backgroundColor: theme.accent }}
               >
-                {canNativeShare ? "Share with Mum" : "Copy link to send"}
+                {canNativeShare ? `Share with ${timeline.dedicated_to}` : "Copy link to send"}
               </button>
               <button
                 type="button"
                 onClick={handleWhatsAppShare}
-                className="rounded-full border px-5 py-2.5 font-['DM_Sans'] text-sm font-medium transition hover:bg-black/5"
+                className="rounded-full border px-4 py-2 font-['DM_Sans'] text-xs font-medium transition hover:bg-black/5 sm:px-5 sm:py-2.5 sm:text-sm"
                 style={{ borderColor: `${theme.accent}88` }}
               >
                 WhatsApp
@@ -371,7 +449,7 @@ export function TimelineViewer({ payload }: TimelineViewerProps) {
               <button
                 type="button"
                 onClick={handleCopyLink}
-                className="rounded-full border px-5 py-2.5 font-['DM_Sans'] text-sm font-medium transition hover:bg-black/5"
+                className="rounded-full border px-4 py-2 font-['DM_Sans'] text-xs font-medium transition hover:bg-black/5 sm:px-5 sm:py-2.5 sm:text-sm"
                 style={{ borderColor: `${theme.accent}88` }}
               >
                 Copy link
@@ -380,8 +458,8 @@ export function TimelineViewer({ payload }: TimelineViewerProps) {
 
             <Link
               href="/create"
-              className="mt-2 font-['DM_Sans'] text-xs uppercase tracking-[0.18em] underline-offset-4 hover:underline"
-              style={{ color: `${theme.accent}` }}
+              className="font-['DM_Sans'] text-[10px] uppercase tracking-[0.2em] underline-offset-4 hover:underline sm:text-xs"
+              style={{ color: theme.accent }}
             >
               Make your own →
             </Link>
@@ -391,7 +469,7 @@ export function TimelineViewer({ payload }: TimelineViewerProps) {
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: shareStatus ? 1 : 0, y: shareStatus ? 0 : 6 }}
               transition={{ duration: 0.25 }}
-              className="h-4 font-['DM_Sans'] text-xs"
+              className="h-4 font-['DM_Sans'] text-[11px]"
               style={{ color: theme.text, opacity: 0.75 }}
               aria-live="polite"
             >
@@ -402,6 +480,7 @@ export function TimelineViewer({ payload }: TimelineViewerProps) {
         {showFinale ? <FinaleEffects effect={timeline.ending_effect} accent={theme.accent} /> : null}
       </section>
 
+      {/* Desktop dot navigation */}
       <div className="pointer-events-auto fixed right-4 top-1/2 z-30 hidden -translate-y-1/2 flex-col gap-2 md:flex">
         {Array.from({ length: totalSlides }).map((_, idx) => {
           const isActive = idx === currentSlide;
@@ -410,12 +489,14 @@ export function TimelineViewer({ payload }: TimelineViewerProps) {
               key={`dot-${idx}`}
               type="button"
               aria-label={`Go to slide ${idx + 1}`}
-              onClick={() => slideRefs.current[idx]?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              onClick={() =>
+                slideRefs.current[idx]?.scrollIntoView({ behavior: "smooth", block: "start" })
+              }
               className="rounded-full transition-all"
               style={{
                 width: isActive ? 10 : 8,
                 height: isActive ? 10 : 8,
-                backgroundColor: isActive ? theme.accent : "rgba(255,255,255,0.3)",
+                backgroundColor: isActive ? theme.accent : "rgba(255,255,255,0.35)",
               }}
             />
           );
