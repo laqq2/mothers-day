@@ -23,7 +23,8 @@ async function resolveBlobUrl(pathOrUrl: string | null): Promise<string | null> 
 
   try {
     const result = await head(pathOrUrl, { token: blobToken });
-    return result.url;
+    // For private blobs, use the signed download URL.
+    return result.downloadUrl;
   } catch {
     return null;
   }
