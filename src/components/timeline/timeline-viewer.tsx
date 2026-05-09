@@ -20,7 +20,10 @@ export function TimelineViewer({ payload }: TimelineViewerProps) {
   const [showFinale, setShowFinale] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [eagerCardIndices, setEagerCardIndices] = useState<number[]>([0]);
+  const [shareStatus, setShareStatus] = useState<string | null>(null);
+  const [canNativeShare, setCanNativeShare] = useState(false);
   const slideRefs = useRef<Array<HTMLElement | null>>([]);
+  const shareTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const hero = useMemo(() => {
     if (timeline.hero_image_url) {
@@ -57,6 +60,66 @@ export function TimelineViewer({ payload }: TimelineViewerProps) {
 
     return () => observer.disconnect();
   }, [cards.length]);
+
+  useEffect(() => {
+    setCanNativeShare(typeof navigator !== "undefined" && typeof navigator.share === "function");
+    return () => {
+      if (shareTimerRef.current) clearTimeout(shareTimerRef.current);
+    };
+  }, []);
+
+  const flashShareStatus = (message: string) => {
+    setShareStatus(message);
+    if (shareTimerRef.current) clearTimeout(shareTimerRef.current);
+    shareTimerRef.current = setTimeout(() => setShareStatus(null), 2600);
+  };
+
+  const buildShareUrl = () => {
+    if (typeof window === "undefined") return "";
+    return window.location.href;
+  };
+
+  const buildShareText = () =>
+    `I made this for ${timeline.dedicated_to} on Forevergram — watch it here:`;
+
+  const handleNativeShare = async () => {
+    const url = buildShareUrl();
+    if (!url) return;
+    try {
+      if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+        await navigator.share({
+          title: `A timeline for ${timeline.dedicated_to}`,
+          text: buildShareText(),
+          url,
+        });
+        return;
+      }
+    } catch (err) {
+      const aborted = err instanceof Error && err.name === "AbortError";
+      if (aborted) return;
+    }
+    await handleCopyLink();
+  };
+
+  const handleCopyLink = async () => {
+    const url = buildShareUrl();
+    if (!url) return;
+    try {
+      await navigator.clipboard.writeText(url);
+      flashShareStatus("Link copied — paste it into Messages or WhatsApp");
+    } catch {
+      flashShareStatus("Couldn't copy automatically. Long-press the address bar to copy.");
+    }
+  };
+
+  const handleWhatsAppShare = () => {
+    const url = buildShareUrl();
+    if (!url) return;
+    const text = encodeURIComponent(`${buildShareText()} ${url}`);
+    if (typeof window !== "undefined") {
+      window.open(`https://wa.me/?text=${text}`, "_blank", "noopener,noreferrer");
+    }
+  };
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -280,27 +343,60 @@ export function TimelineViewer({ payload }: TimelineViewerProps) {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.6 }}
             transition={{ delay: 0.6, duration: 0.7 }}
-            className="mt-14 flex flex-wrap items-center justify-center gap-3"
+            className="mt-14 flex flex-col items-center gap-4"
           >
+            <p
+              className="font-['DM_Sans'] text-xs uppercase tracking-[0.18em]"
+              style={{ color: `${theme.accent}` }}
+            >
+              Send this to {timeline.dedicated_to}
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={handleNativeShare}
+                className="rounded-full px-6 py-2.5 font-['DM_Sans'] text-sm font-semibold text-white shadow-lg shadow-black/10 transition hover:scale-[1.03]"
+                style={{ backgroundColor: theme.accent }}
+              >
+                {canNativeShare ? "Share with Mum" : "Copy link to send"}
+              </button>
+              <button
+                type="button"
+                onClick={handleWhatsAppShare}
+                className="rounded-full border px-5 py-2.5 font-['DM_Sans'] text-sm font-medium transition hover:bg-black/5"
+                style={{ borderColor: `${theme.accent}88` }}
+              >
+                WhatsApp
+              </button>
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="rounded-full border px-5 py-2.5 font-['DM_Sans'] text-sm font-medium transition hover:bg-black/5"
+                style={{ borderColor: `${theme.accent}88` }}
+              >
+                Copy link
+              </button>
+            </div>
+
             <Link
               href="/create"
-              className="rounded-full px-5 py-2 font-['DM_Sans'] text-sm font-semibold text-white transition hover:scale-[1.03]"
-              style={{ backgroundColor: theme.accent }}
+              className="mt-2 font-['DM_Sans'] text-xs uppercase tracking-[0.18em] underline-offset-4 hover:underline"
+              style={{ color: `${theme.accent}` }}
             >
-              Create your own →
+              Make your own →
             </Link>
-            <button
-              type="button"
-              className="rounded-full border px-5 py-2 font-['DM_Sans'] text-sm font-medium transition hover:bg-black/5"
-              style={{ borderColor: `${theme.accent}88` }}
-              onClick={() => {
-                if (typeof navigator !== "undefined" && typeof window !== "undefined") {
-                  navigator.clipboard.writeText(window.location.href);
-                }
-              }}
+
+            <motion.span
+              key={shareStatus ?? "idle"}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: shareStatus ? 1 : 0, y: shareStatus ? 0 : 6 }}
+              transition={{ duration: 0.25 }}
+              className="h-4 font-['DM_Sans'] text-xs"
+              style={{ color: theme.text, opacity: 0.75 }}
+              aria-live="polite"
             >
-              Share this timeline
-            </button>
+              {shareStatus ?? ""}
+            </motion.span>
           </motion.div>
         </div>
         {showFinale ? <FinaleEffects effect={timeline.ending_effect} accent={theme.accent} /> : null}

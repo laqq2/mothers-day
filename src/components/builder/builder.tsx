@@ -3,7 +3,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { nanoid } from "nanoid";
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 
 import { StepCustomise } from "@/components/builder/steps/step-customise";
 import { StepDedication } from "@/components/builder/steps/step-dedication";
@@ -70,7 +69,6 @@ const DEFAULT_DRAFT: DraftTimeline = {
 };
 
 export function Builder() {
-  const router = useRouter();
   const [step, setStep] = useState(0);
   const [visitedSteps, setVisitedSteps] = useState<number[]>([0]);
   const [draft, setDraft] = useState<DraftTimeline>(DEFAULT_DRAFT);
@@ -236,9 +234,8 @@ export function Builder() {
               <StepPublish
                 draft={draft}
                 onBack={goBack}
-                onPublished={(slug) => {
+                onPublished={() => {
                   clearDraft();
-                  router.push(`/t/${slug}`);
                 }}
               />
             ) : null}
