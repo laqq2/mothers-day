@@ -75,14 +75,14 @@ export async function publishTimelineAction(formData: FormData): Promise<Publish
     if (hero instanceof File && hero.size > 0) {
       const ext = getFileExtension(hero);
       const blob = await put(`${prefix}/hero.${ext}`, hero, {
-        access: "public",
+        access: "private",
         token,
         contentType: hero.type || `image/${ext}`,
       });
-      hero_image_url = blob.url;
+      hero_image_url = blob.pathname;
     }
 
-    const imageUrls: string[] = [];
+    const imagePaths: string[] = [];
     for (let i = 0; i < cardsMeta.length; i += 1) {
       const file = formData.get(`cardFile_${i}`);
       if (!(file instanceof File) || file.size === 0) {
@@ -90,11 +90,11 @@ export async function publishTimelineAction(formData: FormData): Promise<Publish
       }
       const ext = getFileExtension(file);
       const uploaded = await put(`${prefix}/card-${i}.${ext}`, file, {
-        access: "public",
+        access: "private",
         token,
         contentType: file.type || `image/${ext}`,
       });
-      imageUrls.push(uploaded.url);
+      imagePaths.push(uploaded.pathname);
     }
 
     const timelineRows = await sql`
@@ -138,7 +138,7 @@ export async function publishTimelineAction(formData: FormData): Promise<Publish
         ${yearNum},
         ${meta.caption.trim()},
         ${meta.emotion_tag},
-        ${imageUrls[i]}
+        ${imagePaths[i]}
       )
     `;
     }

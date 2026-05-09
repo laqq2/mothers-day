@@ -1,4 +1,5 @@
 import { neon } from "@neondatabase/serverless";
+import { head } from "@vercel/blob";
 import { cache } from "react";
 
 import type { MemoryCard, Timeline, TimelinePayload } from "@/types/timeline";
@@ -7,6 +8,25 @@ function getSql() {
   const url = process.env.DATABASE_URL;
   if (!url) return null;
   return neon(url);
+}
+
+const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+
+function isHttpUrl(value: string) {
+  return value.startsWith("http://") || value.startsWith("https://");
+}
+
+async function resolveBlobUrl(pathOrUrl: string | null): Promise<string | null> {
+  if (!pathOrUrl) return null;
+  if (isHttpUrl(pathOrUrl)) return pathOrUrl;
+  if (!blobToken) return null;
+
+  try {
+    const result = await head(pathOrUrl, { token: blobToken });
+    return result.url;
+  } catch {
+    return null;
+  }
 }
 
 const demoTimeline: TimelinePayload = {
@@ -84,5 +104,20 @@ export const getTimelineBySlug = cache(async (slug: string): Promise<TimelinePay
 
   const cards = cardRows as MemoryCard[];
 
-  return { timeline, cards };
+  const heroResolved = await resolveBlobUrl(timeline.hero_image_url);
+  const resolvedCards = await Promise.all(
+    cards.map(async (card) => ({
+      ...card,
+      image_url: (await resolveBlobUrl(card.image_url)) ?? card.image_url,
+    })),
+  );
+
+  if (timeline.hero_image_url && !heroResolved) {
+    return null;
+  }
+
+  return {
+    timeline: { ...timeline, hero_image_url: heroResolved },
+    cards: resolvedCards,
+  };
 });
