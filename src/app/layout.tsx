@@ -31,6 +31,10 @@ export const metadata: Metadata = {
       "Turn your favourite photos into a cinematic memory reel for Mum. Free. Takes 5 minutes.",
     images: ["/og.png"],
   },
+  icons: {
+    icon: "/forevergram-logo.png",
+    apple: "/forevergram-logo.png",
+  },
 };
 
 export default function RootLayout({

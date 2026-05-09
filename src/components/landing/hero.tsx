@@ -8,6 +8,14 @@ export function Hero() {
     <section className="min-h-screen px-6 py-16">
       <div className="mx-auto grid max-w-6xl items-center gap-16 md:grid-cols-2">
         <div>
+          <motion.img
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7 }}
+            src="/forevergram-logo.png"
+            alt="Forevergram logo"
+            className="mb-5 h-14 w-14 rounded-xl border border-[#1C1008]/10 bg-white/60 p-1 shadow-sm"
+          />
           <motion.p
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}

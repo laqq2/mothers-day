@@ -106,6 +106,14 @@ export function TimelineViewer({ payload }: TimelineViewerProps) {
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
 
         <div className="absolute inset-x-0 bottom-20 z-10 px-6 sm:px-10">
+          <motion.img
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+            src="/forevergram-logo.png"
+            alt="Forevergram logo"
+            className="mb-4 h-12 w-12 rounded-lg border border-white/30 bg-white/80 p-1 object-cover"
+          />
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

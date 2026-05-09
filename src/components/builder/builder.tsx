@@ -154,6 +154,19 @@ export function Builder() {
   return (
     <main className="min-h-screen bg-[#FBF6EF] bg-[radial-gradient(circle_at_20%_0%,rgba(196,113,74,0.12),transparent_35%),radial-gradient(circle_at_100%_10%,rgba(196,113,74,0.08),transparent_25%)]">
       <div className="mx-auto w-full max-w-xl px-5 py-12">
+        <div className="mb-6 flex items-center gap-3">
+          <img
+            src="/forevergram-logo.png"
+            alt="Forevergram logo"
+            className="h-10 w-10 rounded-lg border border-[#1C1008]/10 bg-white/60 p-1 object-cover"
+          />
+          <div>
+            <p className="font-['Playfair_Display'] text-xl text-[#1C1008]">Forevergram</p>
+            <p className="font-['DM_Sans'] text-[11px] uppercase tracking-[0.18em] text-[#1C1008]/45">
+              Build your timeline
+            </p>
+          </div>
+        </div>
         <div className="mb-10 grid grid-cols-5 gap-2">
           {STEP_LABELS.map((label, idx) => {
             const isActive = idx === step;

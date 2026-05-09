@@ -1,20 +1,12 @@
-import { createClient } from "@supabase/supabase-js";
+import { neon } from "@neondatabase/serverless";
 import { cache } from "react";
 
 import type { MemoryCard, Timeline, TimelinePayload } from "@/types/timeline";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-const hasSupabase = Boolean(supabaseUrl && supabaseAnonKey);
-
-function getSupabaseClient() {
-  if (!hasSupabase) {
-    return null;
-  }
-  return createClient(supabaseUrl!, supabaseAnonKey!, {
-    auth: { persistSession: false },
-  });
+function getSql() {
+  const url = process.env.DATABASE_URL;
+  if (!url) return null;
+  return neon(url);
 }
 
 const demoTimeline: TimelinePayload = {
@@ -66,31 +58,31 @@ export const getTimelineBySlug = cache(async (slug: string): Promise<TimelinePay
     return demoTimeline;
   }
 
-  const supabase = getSupabaseClient();
-  if (!supabase) {
+  const sql = getSql();
+  if (!sql) {
     return null;
   }
 
-  const { data: timeline, error: timelineError } = await supabase
-    .from("timelines")
-    .select("id, slug, dedicated_to, creator_name, hero_image_url, final_message, theme, ending_effect")
-    .eq("slug", slug)
-    .single<Timeline>();
+  const timelineRows = await sql`
+    select id, slug, dedicated_to, creator_name, hero_image_url, final_message, theme, ending_effect
+    from timelines
+    where slug = ${slug}
+    limit 1
+  `;
 
-  if (timelineError || !timeline) {
+  const timeline = timelineRows[0] as Timeline | undefined;
+  if (!timeline) {
     return null;
   }
 
-  const { data: cards, error: cardsError } = await supabase
-    .from("memory_cards")
-    .select("id, position, year, caption, emotion_tag, image_url")
-    .eq("timeline_id", timeline.id)
-    .order("position", { ascending: true })
-    .returns<MemoryCard[]>();
+  const cardRows = await sql`
+    select id, position, year, caption, emotion_tag, image_url
+    from memory_cards
+    where timeline_id = ${timeline.id}
+    order by position asc
+  `;
 
-  if (cardsError) {
-    return null;
-  }
+  const cards = cardRows as MemoryCard[];
 
-  return { timeline, cards: cards ?? [] };
+  return { timeline, cards };
 });

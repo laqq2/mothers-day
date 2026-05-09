@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { TimelineViewer } from "@/components/timeline/timeline-viewer";
-import { getTimelineBySlug } from "@/lib/supabase";
+import { getTimelineBySlug } from "@/lib/db";
 
 type TimelineViewerPageProps = {
   params: {

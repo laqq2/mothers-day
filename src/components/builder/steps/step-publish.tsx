@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 
+import { publishTimelineAction } from "@/app/actions/publish-timeline";
 import type { DraftTimeline } from "@/components/builder/builder";
-import { publishTimeline } from "@/lib/upload";
+import { buildPublishFormData } from "@/lib/publish-form";
 
 type StepPublishProps = {
   draft: DraftTimeline;
@@ -40,7 +41,8 @@ export function StepPublish({ draft, onBack, onPublished }: StepPublishProps) {
             try {
               setLoading(true);
               setError(null);
-              const slug = await publishTimeline(draft);
+              const formData = await buildPublishFormData(draft);
+              const slug = await publishTimelineAction(formData);
               onPublished(slug);
             } catch (err) {
               setError(err instanceof Error ? err.message : "Publishing failed. Please retry.");
